@@ -1,83 +1,91 @@
-/**
- * sockets/chatSocket.js
- * ----------------------
- * Sets up Socket.IO for real-time bidirectional communication.
- *
- * What this file does RIGHT NOW:
- *   - Attaches Socket.IO to the HTTP server
- *   - Listens for a "connection" event and logs when a client connects
- *   - Has placeholder event handlers for sending and receiving messages
- *
- * What you will add LATER:
- *   - Authenticate the socket connection using the JWT token
- *   - Support "rooms" so each pair of users has a private channel
- *   - Emit events to specific users (not just broadcast to everyone)
- *   - Handle the "disconnect" event to update user online status
- *
- * ── How Socket.IO works (brief overview) ─────────────────────────────────
- * Unlike HTTP (request → response), Socket.IO keeps a persistent connection open.
- * Either side (client or server) can emit an event at any time.
- *
- *   Client emits  → "sendMessage"   → server receives it
- *   Server emits  → "receiveMessage" → client receives it
- */
+const { Server } = require('socket.io');
+const { verifyToken } = require('../crypto/jwt');
+const chatService    = require('../services/chatService');
 
-const { Server } = require("socket.io");
+// Maps userId (string) → socket.id so we can route messages to the right socket
+const userSocketMap = {};
 
-/**
- * initSocket()
- * Attaches Socket.IO to the HTTP server and registers event handlers.
- *
- * @param {http.Server} server - The Node.js HTTP server from server.js
- */
 const initSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000", // Allow connections from the React dev server
-      methods: ["GET", "POST"],
+      origin: 'http://localhost:3000',
+      methods: ['GET', 'POST'],
     },
   });
 
-  // ── Connection Handler ──────────────────────────────────────────────────
-  io.on("connection", (socket) => {
-    console.log(`[chatSocket] Client connected: ${socket.id}`);
+  // ── Auth middleware for every socket connection ──────────────────────────
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication error: no token'));
 
-    // TODO: Authenticate the socket here
-    // const token = socket.handshake.auth.token;
-    // Verify the JWT token using crypto/jwt.js → jwtHelper.verifyToken(token)
-    // If invalid, call socket.disconnect()
+    const decoded = verifyToken(token);
+    if (!decoded) return next(new Error('Authentication error: invalid token'));
 
-    // TODO: Join a private room for this user
-    // socket.join(`user-${userId}`);
+    socket.userId = decoded.id.toString();
+    next();
+  });
 
-    // ── Send Message Event ─────────────────────────────────────────────────
-    // The client emits "sendMessage" when the user sends a message
-    socket.on("sendMessage", (data) => {
-      // data will contain: { recipientId, ciphertext, iv }
-      // The message content is already AES-encrypted by the client
+  // ── Connection Handler ───────────────────────────────────────────────────
+  io.on('connection', (socket) => {
+    const userId = socket.userId;
+    userSocketMap[userId] = socket.id;
+    console.log(`[socket] User ${userId} connected (${socket.id})`);
 
-      console.log(`[chatSocket] sendMessage received from ${socket.id}`);
+    // Join a private room named after the user's ID
+    socket.join(`user-${userId}`);
 
-      // TODO: Save the message to MongoDB via chatService.saveMessage()
-      // TODO: Emit "receiveMessage" ONLY to the intended recipient:
-      //   io.to(`user-${data.recipientId}`).emit('receiveMessage', data);
+    // ── Send Message ─────────────────────────────────────────────────────
+    // Payload: { receiverId, ciphertext, iv }
+    socket.on('sendMessage', async (data) => {
+      try {
+        const { receiverId, ciphertext, iv } = data;
+        if (!receiverId || !ciphertext || !iv) return;
 
-      // Placeholder: broadcast to all connected clients (not secure — fix later!)
-      socket.broadcast.emit("receiveMessage", {
-        ...data,
-        from: socket.id,
-        timestamp: new Date().toISOString(),
-      });
+        // 1. Persist to MongoDB (server stores only ciphertext — never decrypts)
+        const saved = await chatService.saveMessage(userId, receiverId, ciphertext, iv);
+
+        // 2. Emit to the recipient's private room (if they're online)
+        io.to(`user-${receiverId}`).emit('receiveMessage', {
+          _id:        saved._id,
+          sender:     userId,
+          receiver:   receiverId,
+          ciphertext: saved.ciphertext,
+          iv:         saved.iv,
+          createdAt:  saved.createdAt,
+        });
+
+        // 3. Echo back to sender (so sender's own UI updates from the server)
+        socket.emit('messageSent', {
+          _id:        saved._id,
+          sender:     userId,
+          receiver:   receiverId,
+          ciphertext: saved.ciphertext,
+          iv:         saved.iv,
+          createdAt:  saved.createdAt,
+        });
+      } catch (err) {
+        console.error('[socket] sendMessage error:', err.message);
+        socket.emit('error', { message: 'Failed to send message' });
+      }
     });
 
-    // ── Disconnect Event ───────────────────────────────────────────────────
-    socket.on("disconnect", () => {
-      console.log(`[chatSocket] Client disconnected: ${socket.id}`);
-      // TODO: Update user's online status in the database
+    // ── Typing Indicator ────────────────────────────────────────────────────
+    socket.on('typing', ({ receiverId }) => {
+      io.to(`user-${receiverId}`).emit('typing', { senderId: userId });
+    });
+
+    socket.on('stopTyping', ({ receiverId }) => {
+      io.to(`user-${receiverId}`).emit('stopTyping', { senderId: userId });
+    });
+
+    // ── Disconnect ───────────────────────────────────────────────────────────
+    socket.on('disconnect', () => {
+      delete userSocketMap[userId];
+      console.log(`[socket] User ${userId} disconnected`);
     });
   });
 
-  console.log("[chatSocket] Socket.IO initialized");
+  console.log('[socket] Socket.IO initialized');
   return io;
 };
 
