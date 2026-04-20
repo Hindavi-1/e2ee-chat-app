@@ -90,14 +90,14 @@ const { registerUser, loginUser } = require('../services/authService');
 // @route   POST /api/auth/register
 const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, publicKey } = req.body;
 
     // Basic validation
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    const user = await registerUser(username, email, password);
+    const user = await registerUser(username, email, password, publicKey);
 
     res.status(201).json(user);
   } catch (error) {
@@ -109,14 +109,14 @@ const register = async (req, res) => {
 // @route   POST /api/auth/login
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, publicKey } = req.body;
 
     // Basic validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await loginUser(email, password);
+    const user = await loginUser(email, password, publicKey);
 
     res.status(200).json(user);
   } catch (error) {
