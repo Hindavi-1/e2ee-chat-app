@@ -46,8 +46,6 @@ secure-chat/
     │   ├── authController.js      # Register / login handlers
     │   └── chatController.js      # Get / send message handlers
     ├── crypto/                    ⚠️  PLACEHOLDERS ONLY
-    │   ├── aes.js                 # AES-256-GCM encrypt/decrypt (server-side)
-    │   ├── ecdh.js                # ECDH key pair generation
     │   ├── hash.js                # bcrypt password hashing
     │   └── jwt.js                 # JWT sign / verify
     ├── middleware/

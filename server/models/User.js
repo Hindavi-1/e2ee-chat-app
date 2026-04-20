@@ -20,32 +20,37 @@
  *   - createdAt : Date (auto-managed by Mongoose timestamps option)
  */
 
+
+
 // ── Placeholder Schema Description ────────────────────────────────────────
 // This is just documentation — not real Mongoose code yet.
-const UserSchemaDescription = {
-  username: "String — unique identifier for the user",
-  password: "String — bcrypt hash (NEVER store plaintext passwords)",
-  publicKey:
-    "String — ECDH public key, shared with other users for key exchange",
-  createdAt: "Date — auto-generated timestamp",
-};
+
+// const UserSchemaDescription = {
+//   username: "String — unique identifier for the user",
+//   password: "String — bcrypt hash (NEVER store plaintext passwords)",
+//   publicKey:
+//     "String — ECDH public key, shared with other users for key exchange",
+//   createdAt: "Date — auto-generated timestamp",
+// };
 
 /**
  * createUserPlaceholder()
  * A dummy factory function showing what a User object will look like.
  * Replace this with a real Mongoose model later.
- */
-const createUserPlaceholder = ({ username, password, publicKey }) => {
-  return {
-    id: `user-${Date.now()}`, // MongoDB will auto-generate _id
-    username,
-    password, // TODO: This must be a bcrypt hash in the real implementation!
-    publicKey: publicKey || null,
-    createdAt: new Date().toISOString(),
-  };
-};
+//  */
+// const createUserPlaceholder = ({ username, password, publicKey }) => {
+//   return {
+//     id: `user-${Date.now()}`, // MongoDB will auto-generate _id
+//     username,
+//     password, // TODO: This must be a bcrypt hash in the real implementation!
+//     publicKey: publicKey || null,
+//     createdAt: new Date().toISOString(),
+//   };
+// };
 
-module.exports = { UserSchemaDescription, createUserPlaceholder };
+// module.exports = { UserSchemaDescription, createUserPlaceholder };
+
+
 
 // ── What the real Mongoose model will look like ───────────────────────────
 /*
@@ -67,3 +72,32 @@ userSchema.pre('save', async function (next) {
 
 module.exports = mongoose.model('User', userSchema);
 */
+
+
+
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema(
+  {
+    username: {
+      type: String,
+      required: true
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    password: {
+      type: String,
+      required: true
+    },
+    publicKey: {
+      type: String, // for ECDH
+      default: ''
+    }
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model('User', userSchema);

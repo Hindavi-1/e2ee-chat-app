@@ -16,6 +16,8 @@
  *   - Environment-variable validation (dotenv)
  */
 
+
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -52,4 +54,21 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
   // TODO: Connect to MongoDB here → require('./config/db').connectDB()
+  require('dotenv').config();
+  const connectDB = require('./config/db');
+  connectDB();
+});
+
+
+
+//temporary test route
+app.get('/test-db', async (req, res) => {
+  try {
+    const User = require('./models/User');
+
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });

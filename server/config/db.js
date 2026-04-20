@@ -21,11 +21,29 @@
  *   };
  */
 
+
+
+const mongoose = require('mongoose');
+
 const connectDB = async () => {
-  // TODO: Replace this placeholder with a real MongoDB connection
-  console.log(
-    "[db.js] connectDB() called — no real DB connected yet (placeholder)"
-  );
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error('Database connection failed:', error.message);
+    process.exit(1);
+  }
 };
 
-module.exports = { connectDB };
+module.exports = connectDB;
+
+
+// const connectDB = async () => {
+//   // TODO: Replace this placeholder with a real MongoDB connection
+//   console.log(
+//     "[db.js] connectDB() called — no real DB connected yet (placeholder)"
+//   );
+// };
+
+// module.exports = { connectDB };

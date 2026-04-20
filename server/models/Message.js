@@ -24,31 +24,31 @@
  */
 
 // ── Placeholder Schema Description ────────────────────────────────────────
-const MessageSchemaDescription = {
-  sender: "ObjectId — references the User who sent the message",
-  recipient: "ObjectId — references the User who should receive the message",
-  ciphertext:
-    "String — AES-encrypted message content (server never decrypts this)",
-  iv: "String — AES initialization vector required for decryption on the client",
-  createdAt: "Date — auto-generated timestamp",
-};
+// const MessageSchemaDescription = {
+//   sender: "ObjectId — references the User who sent the message",
+//   recipient: "ObjectId — references the User who should receive the message",
+//   ciphertext:
+//     "String — AES-encrypted message content (server never decrypts this)",
+//   iv: "String — AES initialization vector required for decryption on the client",
+//   createdAt: "Date — auto-generated timestamp",
+// };
 
 /**
  * createMessagePlaceholder()
  * A dummy factory showing what a Message object will look like.
- */
-const createMessagePlaceholder = ({ senderId, recipientId, ciphertext, iv }) => {
-  return {
-    id: `msg-${Date.now()}`,
-    sender: senderId,
-    recipient: recipientId,
-    ciphertext: ciphertext || "<encrypted-content>",
-    iv: iv || "<initialization-vector>",
-    createdAt: new Date().toISOString(),
-  };
-};
+//  */
+// const createMessagePlaceholder = ({ senderId, recipientId, ciphertext, iv }) => {
+//   return {
+//     id: `msg-${Date.now()}`,
+//     sender: senderId,
+//     recipient: recipientId,
+//     ciphertext: ciphertext || "<encrypted-content>",
+//     iv: iv || "<initialization-vector>",
+//     createdAt: new Date().toISOString(),
+//   };
+// };
 
-module.exports = { MessageSchemaDescription, createMessagePlaceholder };
+// module.exports = { MessageSchemaDescription, createMessagePlaceholder };
 
 // ── What the real Mongoose model will look like ───────────────────────────
 /*
@@ -63,3 +63,32 @@ const messageSchema = new mongoose.Schema({
 
 module.exports = mongoose.model('Message', messageSchema);
 */
+
+
+const mongoose = require('mongoose');
+
+const messageSchema = new mongoose.Schema(
+  {
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    receiver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    ciphertext: {
+      type: String,
+      required: true
+    },
+    iv: {
+      type: String,
+      required: true
+    }
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model('Message', messageSchema);
