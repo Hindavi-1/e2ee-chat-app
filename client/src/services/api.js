@@ -26,27 +26,53 @@ const BASE_URL = 'http://localhost:5000/api';
  * @param {string} endpoint - API path, e.g. '/auth/login'
  * @param {object} body     - Optional request body (for POST/PUT)
  * @returns {Promise<object>} - The parsed JSON response
- */
-export const apiRequest = async (method, endpoint, body = null) => {
-  console.log(`[api.js] ${method} ${BASE_URL}${endpoint} — placeholder, no real request made`);
+//  */
+// export const apiRequest = async (method, endpoint, body = null) => {
+//   console.log(`[api.js] ${method} ${BASE_URL}${endpoint} — placeholder, no real request made`);
 
-  // TODO: Replace with a real fetch() or axios call:
-  //
-  // const token = localStorage.getItem('authToken'); // or from context
-  //
-  // const options = {
-  //   method,
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     ...(token && { Authorization: `Bearer ${token}` }),
-  //   },
-  //   ...(body && { body: JSON.stringify(body) }),
-  // };
-  //
-  // const response = await fetch(`${BASE_URL}${endpoint}`, options);
-  // if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-  // return await response.json();
+//   // TODO: Replace with a real fetch() or axios call:
+//   //
+//   // const token = localStorage.getItem('authToken'); // or from context
+//   //
+//   // const options = {
+//   //   method,
+//   //   headers: {
+//   //     'Content-Type': 'application/json',
+//   //     ...(token && { Authorization: `Bearer ${token}` }),
+//   //   },
+//   //   ...(body && { body: JSON.stringify(body) }),
+//   // };
+//   //
+//   // const response = await fetch(`${BASE_URL}${endpoint}`, options);
+//   // if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+//   // return await response.json();
 
-  // ── Mock response for now ──────────────────────────────────────────────
-  return { success: true, message: `Mock response for ${method} ${endpoint}` };
+//   // ── Mock response for now ──────────────────────────────────────────────
+//   return { success: true, message: `Mock response for ${method} ${endpoint}` };
+// };
+
+
+
+
+
+
+export const apiRequest = async (endpoint, method = 'GET', body = null) => {
+  const token = localStorage.getItem('token');
+
+  const res = await fetch(`http://localhost:5000/api${endpoint}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` })
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || 'Something went wrong');
+  }
+
+  return data;
 };

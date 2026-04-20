@@ -29,52 +29,102 @@ const authService = require("../services/authService");
  *   2. Call authService.registerUser(username, password)
  *   3. Return the new user object (without the password hash)
  */
+
+
+// const register = async (req, res) => {
+//   try {
+//     const { username, password } = req.body;
+
+//     // TODO: Validate input (check for missing fields, password length, etc.)
+//     // TODO: Call authService.registerUser(username, password)
+//     // TODO: Return the created user and a JWT token
+
+//     // ── Placeholder response ───────────────────────────────────────────────
+//     res.status(201).json({
+//       message: "register() placeholder — user not really created",
+//       receivedData: { username }, // Never echo back the password, even in placeholder!
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+// /**
+//  * login()
+//  * Handles POST /api/auth/login
+//  *
+//  * Expected request body:
+//  *   { username: string, password: string }
+//  *
+//  * What will happen here later:
+//  *   1. Call authService.loginUser(username, password)
+//  *   2. If credentials are valid, return a signed JWT token
+//  *   3. If invalid, return 401 Unauthorized
+//  */
+// const login = async (req, res) => {
+//   try {
+//     const { username, password } = req.body;
+
+//     // TODO: Call authService.loginUser(username, password)
+//     // TODO: On success, sign and return a JWT token
+//     // TODO: On failure, return 401 with a generic error message
+
+//     // ── Placeholder response ───────────────────────────────────────────────
+//     res.status(200).json({
+//       message: "login() placeholder — not really authenticated",
+//       token: "dummy-jwt-token-replace-with-real-one-later",
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+// module.exports = { register, login };
+
+
+
+
+const { registerUser, loginUser } = require('../services/authService');
+
+// @desc    Register new user
+// @route   POST /api/auth/register
 const register = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, email, password } = req.body;
 
-    // TODO: Validate input (check for missing fields, password length, etc.)
-    // TODO: Call authService.registerUser(username, password)
-    // TODO: Return the created user and a JWT token
+    // Basic validation
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
-    // ── Placeholder response ───────────────────────────────────────────────
-    res.status(201).json({
-      message: "register() placeholder — user not really created",
-      receivedData: { username }, // Never echo back the password, even in placeholder!
-    });
+    const user = await registerUser(username, email, password);
+
+    res.status(201).json(user);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
-/**
- * login()
- * Handles POST /api/auth/login
- *
- * Expected request body:
- *   { username: string, password: string }
- *
- * What will happen here later:
- *   1. Call authService.loginUser(username, password)
- *   2. If credentials are valid, return a signed JWT token
- *   3. If invalid, return 401 Unauthorized
- */
+// @desc    Login user
+// @route   POST /api/auth/login
 const login = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    // TODO: Call authService.loginUser(username, password)
-    // TODO: On success, sign and return a JWT token
-    // TODO: On failure, return 401 with a generic error message
+    // Basic validation
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
-    // ── Placeholder response ───────────────────────────────────────────────
-    res.status(200).json({
-      message: "login() placeholder — not really authenticated",
-      token: "dummy-jwt-token-replace-with-real-one-later",
-    });
+    const user = await loginUser(email, password);
+
+    res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(401).json({ message: error.message });
   }
 };
 
-module.exports = { register, login };
+module.exports = {
+  register,
+  login
+};

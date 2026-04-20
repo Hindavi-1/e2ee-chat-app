@@ -60,15 +60,5 @@ server.listen(PORT, () => {
 });
 
 
-
-//temporary test route
-app.get('/test-db', async (req, res) => {
-  try {
-    const User = require('./models/User');
-
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);

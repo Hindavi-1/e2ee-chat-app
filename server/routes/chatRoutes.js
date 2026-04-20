@@ -13,20 +13,35 @@
  *   - Input validation on POST /api/messages
  */
 
-const express = require("express");
+
+// const express = require("express");
+// const router = express.Router();
+// const { getMessages, sendMessage } = require("../controllers/chatController");
+
+// // const { protect } = require('../middleware/authMiddleware');
+// // TODO: Uncomment the line above and add `protect` as middleware once JWT is implemented
+// // Example: router.get('/', protect, getMessages);
+
+// // GET /api/messages
+// // Retrieves messages for the authenticated user
+// router.get("/", getMessages);
+
+// // POST /api/messages
+// // Saves a new (encrypted) message
+// router.post("/", sendMessage);
+
+// module.exports = router;
+
+
+
+const express = require('express');
 const router = express.Router();
-const { getMessages, sendMessage } = require("../controllers/chatController");
 
-// const { protect } = require('../middleware/authMiddleware');
-// TODO: Uncomment the line above and add `protect` as middleware once JWT is implemented
-// Example: router.get('/', protect, getMessages);
+const { getMessages, sendMessage } = require('../controllers/chatController');
+const { protect } = require('../middleware/authMiddleware');
 
-// GET /api/messages
-// Retrieves messages for the authenticated user
-router.get("/", getMessages);
-
-// POST /api/messages
-// Saves a new (encrypted) message
-router.post("/", sendMessage);
+// Protected routes
+router.get('/', protect, getMessages);
+router.post('/', protect, sendMessage);
 
 module.exports = router;

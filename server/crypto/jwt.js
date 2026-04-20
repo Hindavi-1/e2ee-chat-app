@@ -17,42 +17,30 @@
  * !! DO NOT IMPLEMENT !! — This is a placeholder only.
  */
 
-/**
- * signToken()
- * Creates and signs a JWT for an authenticated user.
- *
- * @param {string} userId - The user's MongoDB ObjectId (or unique identifier)
- * @returns {string}      - A signed JWT string
- */
+
+
+
+const jwt = require('jsonwebtoken');
+
+// Generate token
 const signToken = (userId) => {
-  // TODO: Implement using the 'jsonwebtoken' npm package:
-  // const jwt = require('jsonwebtoken');
-  // return jwt.sign(
-  //   { userId },
-  //   process.env.JWT_SECRET,
-  //   { expiresIn: '7d' }   // token expires in 7 days
-  // );
-
-  console.log(`[jwt.js] signToken() — placeholder for userId: ${userId}`);
-  return `placeholder-token-for-${userId}`;
+  return jwt.sign(
+    { id: userId },                 // payload
+    process.env.JWT_SECRET,         // secret key
+    { expiresIn: '7d' }             // token expiry
+  );
 };
 
-/**
- * verifyToken()
- * Verifies a JWT and returns the decoded payload.
- *
- * @param {string} token - The JWT string from the Authorization header
- * @returns {object}     - Decoded payload (e.g., { userId, iat, exp })
- * @throws               - If the token is invalid, expired, or tampered with
- */
+// Verify token
 const verifyToken = (token) => {
-  // TODO: Implement:
-  // const jwt = require('jsonwebtoken');
-  // return jwt.verify(token, process.env.JWT_SECRET);
-  // ↑ This throws if the token is invalid — catch it in authMiddleware
-
-  console.log("[jwt.js] verifyToken() — placeholder, not implemented");
-  return { userId: "placeholder-user-id" };
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    return null;
+  }
 };
 
-module.exports = { signToken, verifyToken };
+module.exports = {
+  signToken,
+  verifyToken
+};

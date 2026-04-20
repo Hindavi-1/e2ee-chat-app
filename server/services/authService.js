@@ -14,49 +14,70 @@
  *   - Throw meaningful errors for duplicate users, wrong passwords, etc.
  */
 
-/**
- * registerUser()
- * Creates a new user account.
- *
- * @param {string} username - Desired username
- * @param {string} password - Plaintext password (will be hashed here later)
- * @returns {object}        - The new user object (without the password hash)
- */
-const registerUser = async (username, password) => {
-  // TODO: Check if a user with this username already exists in MongoDB
-  // TODO: Hash the password → const hashedPassword = await hashHelper.hash(password);
-  // TODO: Create and save a new User document
-  // TODO: Return the user (omit the password field)
+/**/
 
-  console.log(`[authService] registerUser() placeholder called for: ${username}`);
 
-  return {
-    id: "placeholder-user-id",
+const User = require('../models/User');
+const { hashPassword, comparePassword } = require('../crypto/hash');
+const { signToken } = require('../crypto/jwt');
+
+// Register new user
+const registerUser = async (username, email, password) => {
+  // 1. Check if user already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new Error('User already exists');
+  }
+
+  // 2. Hash password
+  const hashedPassword = await hashPassword(password);
+
+  // 3. Create user
+  const user = await User.create({
     username,
-    // password is intentionally omitted from the return value
-  };
-};
+    email,
+    password: hashedPassword
+  });
 
-/**
- * loginUser()
- * Verifies credentials and returns authentication data.
- *
- * @param {string} username - The user's username
- * @param {string} password - The plaintext password to verify
- * @returns {object}        - { user, token } if valid
- */
-const loginUser = async (username, password) => {
-  // TODO: Find the user in MongoDB by username
-  // TODO: Compare password with stored hash → await hashHelper.compare(password, user.password)
-  // TODO: If match, sign a JWT → const token = jwtHelper.signToken(user._id)
-  // TODO: Return { user, token }
-
-  console.log(`[authService] loginUser() placeholder called for: ${username}`);
+  // 4. Generate token
+  const token = signToken(user._id);
 
   return {
-    user: { id: "placeholder-user-id", username },
-    token: "placeholder-jwt-token",
+    _id: user._id,
+    username: user.username,
+    email: user.email,
+    token
   };
 };
 
-module.exports = { registerUser, loginUser };
+// Login user
+const loginUser = async (email, password) => {
+  // 1. Find user
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  // 2. Compare password
+  const isMatch = await comparePassword(password, user.password);
+  if (!isMatch) {
+    throw new Error('Invalid credentials');
+  }
+
+  // 3. Generate token
+  const token = signToken(user._id);
+
+  return {
+    _id: user._id,
+    username: user.username,
+    email: user.email,
+    token
+  };
+};
+
+module.exports = {
+  registerUser,
+  loginUser
+};
+
+

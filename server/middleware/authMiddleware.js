@@ -28,22 +28,64 @@
  *   const { protect } = require('../middleware/authMiddleware');
  *   router.get('/messages', protect, chatController.getMessages);
  */
-const protect = (req, res, next) => {
-  // TODO: Extract token from Authorization header
-  // const authHeader = req.headers.authorization;
-  // if (!authHeader || !authHeader.startsWith('Bearer ')) {
-  //   return res.status(401).json({ error: 'No token provided' });
-  // }
-  // const token = authHeader.split(' ')[1];
 
-  // TODO: Verify the JWT token
-  // const decoded = jwtHelper.verifyToken(token);  // from crypto/jwt.js
-  // req.user = { id: decoded.userId };              // attach user to request
 
-  console.log("[authMiddleware] protect() called — no real check yet (placeholder)");
 
-  // For now, just pass through to the next handler
-  next();
+// const protect = (req, res, next) => {
+//   // TODO: Extract token from Authorization header
+//   // const authHeader = req.headers.authorization;
+//   // if (!authHeader || !authHeader.startsWith('Bearer ')) {
+//   //   return res.status(401).json({ error: 'No token provided' });
+//   // }
+//   // const token = authHeader.split(' ')[1];
+
+//   // TODO: Verify the JWT token
+//   // const decoded = jwtHelper.verifyToken(token);  // from crypto/jwt.js
+//   // req.user = { id: decoded.userId };              // attach user to request
+
+//   console.log("[authMiddleware] protect() called — no real check yet (placeholder)");
+
+//   // For now, just pass through to the next handler
+//   next();
+// };
+
+// module.exports = { protect };
+
+
+
+const { verifyToken } = require('../crypto/jwt');
+const User = require('../models/User');
+
+// Middleware to protect routes
+const protect = async (req, res, next) => {
+  let token;
+
+  // 1. Get token from headers
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      // Format: "Bearer <token>"
+      token = req.headers.authorization.split(' ')[1];
+
+      // 2. Verify token
+      const decoded = verifyToken(token);
+
+      if (!decoded) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      // 3. Get user from DB (optional but good practice)
+      req.user = await User.findById(decoded.id).select('-password');
+
+      next(); // move to next function
+    } catch (error) {
+      return res.status(401).json({ message: 'Token verification failed' });
+    }
+  } else {
+    return res.status(401).json({ message: 'No token provided' });
+  }
 };
 
 module.exports = { protect };
