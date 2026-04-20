@@ -20,21 +20,23 @@
  */
 
 import React, { useState } from 'react';
+import { register } from '../services/authService';
 
 const Register = ({ onRegister, onGoLogin }) => {
-  const [username, setUsername]           = useState('');
-  const [password, setPassword]           = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPass] = useState('');
-  const [error, setError]                 = useState('');
-  const [isLoading, setIsLoading]         = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     // Basic client-side validation
-    if (!username.trim() || !password.trim()) {
-      setError('Username and password are required.');
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setError('Username, email, and password are required.');
       return;
     }
     if (password.length < 8) {
@@ -48,92 +50,102 @@ const Register = ({ onRegister, onGoLogin }) => {
 
     setIsLoading(true);
 
-    try {
-      // TODO: const result = await authService.register(username, password);
+    const result = await register({ username, email, password });
 
-      // ECDH NOTE: After creating the account, generate an ECDH key pair:
-      // const { publicKey, privateKey } = await ecdh.generateKeyPair();
-      // const exportedPublicKey = await ecdh.exportPublicKey(publicKey);
-      // Then send exportedPublicKey to the server to store with the user profile.
-      // The privateKey stays in memory (stored in AuthContext).
-
-      // Placeholder: simulate a small delay, then call onRegister with mock data
-      await new Promise((r) => setTimeout(r, 600));
-      onRegister({ user: { id: 'mock-id', username }, token: 'mock-token' });
-    } catch (err) {
-      setError('Registration failed. Username may already be taken.');
-    } finally {
-      setIsLoading(false);
+    // Store token in localStorage
+    if (result.token) {
+      localStorage.setItem('token', result.token);
     }
-  };
 
-  return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.logo}>🛡️</div>
-        <h1 style={styles.title}>Create Account</h1>
-        <p style={styles.subtitle}>Join SecureChat — private by design</p>
+    // ECDH NOTE: After creating the account, generate an ECDH key pair:
+    // const { publicKey, privateKey } = await ecdh.generateKeyPair();
+    // const exportedPublicKey = await ecdh.exportPublicKey(publicKey);
+    // Then send exportedPublicKey to the server to store with the user profile.
+    // The privateKey stays in memory (stored in AuthContext).
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.field}>
-            <label style={styles.label}>Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="choose_a_username"
-              style={styles.input}
-              autoComplete="username"
-            />
-          </div>
+    onRegister({ user: result, token: result.token });
+  }
+};
 
-          <div style={styles.field}>
-            <label style={styles.label}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="min. 8 characters"
-              style={styles.input}
-              autoComplete="new-password"
-            />
-          </div>
+return (
+  <div style={styles.page}>
+    <div style={styles.card}>
+      <div style={styles.logo}>🛡️</div>
+      <h1 style={styles.title}>Create Account</h1>
+      <p style={styles.subtitle}>Join SecureChat — private by design</p>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Confirm Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPass(e.target.value)}
-              placeholder="repeat your password"
-              style={{
-                ...styles.input,
-                borderColor: confirmPassword && confirmPassword !== password ? '#ef4444' : '#334155',
-              }}
-              autoComplete="new-password"
-            />
-          </div>
-
-          {error && <div style={styles.error}>{error}</div>}
-
-          <button type="submit" disabled={isLoading} style={styles.button}>
-            {isLoading ? 'Creating account…' : 'Create Account'}
-          </button>
-        </form>
-
-        <p style={styles.switchText}>
-          Already have an account?{' '}
-          <span onClick={onGoLogin} style={styles.link}>Sign in</span>
-        </p>
-
-        <div style={styles.securityNote}>
-          🔑 On registration, your device will generate an ECDH key pair.<br />
-          Your private key <strong style={{ color: '#38bdf8' }}>never leaves your device</strong>.
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <div style={styles.field}>
+          <label style={styles.label}>Username</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="choose_a_username"
+            style={styles.input}
+            autoComplete="username"
+          />
         </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your_email@example.com"
+            style={styles.input}
+            autoComplete="email"
+          />
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="min. 8 characters"
+            style={styles.input}
+            autoComplete="new-password"
+          />
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>Confirm Password</label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPass(e.target.value)}
+            placeholder="repeat your password"
+            style={{
+              ...styles.input,
+              borderColor: confirmPassword && confirmPassword !== password ? '#ef4444' : '#334155',
+            }}
+            autoComplete="new-password"
+          />
+        </div>
+
+        {error && <div style={styles.error}>{error}</div>}
+
+        <button type="submit" disabled={isLoading} style={styles.button}>
+          {isLoading ? 'Creating account…' : 'Create Account'}
+        </button>
+      </form>
+
+      <p style={styles.switchText}>
+        Already have an account?{' '}
+        <span onClick={onGoLogin} style={styles.link}>Sign in</span>
+      </p>
+
+      <div style={styles.securityNote}>
+        🔑 On registration, your device will generate an ECDH key pair.<br />
+        Your private key <strong style={{ color: '#38bdf8' }}>never leaves your device</strong>.
       </div>
     </div>
-  );
-};
+  </div>
+);
+
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 const styles = {
@@ -154,12 +166,12 @@ const styles = {
     maxWidth: '400px',
     textAlign: 'center',
   },
-  logo:     { fontSize: '48px', marginBottom: '12px' },
-  title:    { color: '#f1f5f9', fontSize: '24px', fontWeight: 700, margin: '0 0 6px' },
+  logo: { fontSize: '48px', marginBottom: '12px' },
+  title: { color: '#f1f5f9', fontSize: '24px', fontWeight: 700, margin: '0 0 6px' },
   subtitle: { color: '#64748b', fontSize: '14px', margin: '0 0 32px' },
-  form:     { display: 'flex', flexDirection: 'column', gap: '16px' },
-  field:    { textAlign: 'left' },
-  label:    { display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px', fontWeight: 500 },
+  form: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  field: { textAlign: 'left' },
+  label: { display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px', fontWeight: 500 },
   input: {
     width: '100%',
     backgroundColor: '#1e293b',
@@ -190,8 +202,8 @@ const styles = {
     padding: '12px',
     marginTop: '4px',
   },
-  switchText:   { color: '#64748b', fontSize: '13px', marginTop: '20px' },
-  link:         { color: '#38bdf8', cursor: 'pointer', fontWeight: 600 },
+  switchText: { color: '#64748b', fontSize: '13px', marginTop: '20px' },
+  link: { color: '#38bdf8', cursor: 'pointer', fontWeight: 600 },
   securityNote: {
     backgroundColor: '#0c1a2e',
     border: '1px solid #1e3a5f',

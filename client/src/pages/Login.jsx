@@ -19,9 +19,10 @@
  */
 
 import React, { useState } from 'react';
+import { login } from '../services/authService';
 
 const Login = ({ onLogin, onGoRegister }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,22 +31,24 @@ const Login = ({ onLogin, onGoRegister }) => {
     e.preventDefault();
     setError('');
 
-    if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password.');
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // TODO: Replace with: const result = await authService.login(username, password);
-      // TODO: Call loginUser(result.user, result.token) from useAuth()
+      const result = await login({ email, password });
+      
+      // Store token in localStorage
+      if (result.token) {
+        localStorage.setItem('token', result.token);
+      }
 
-      // Placeholder: simulate a small delay, then call onLogin with mock data
-      await new Promise((r) => setTimeout(r, 500));
-      onLogin({ user: { id: 'mock-id', username }, token: 'mock-token' });
+      onLogin({ user: result, token: result.token });
     } catch (err) {
-      setError('Login failed. Please check your credentials.');
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -62,14 +65,14 @@ const Login = ({ onLogin, onGoRegister }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.field}>
-            <label style={styles.label}>Username</label>
+            <label style={styles.label}>Email</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your_username"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your_email@example.com"
               style={styles.input}
-              autoComplete="username"
+              autoComplete="email"
             />
           </div>
 

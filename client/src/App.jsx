@@ -61,6 +61,7 @@ const App = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentPage('login');
+    localStorage.removeItem('token');
     // TODO: Call socketService.disconnect() here
     // TODO: Clear ECDH private key from memory
   };
