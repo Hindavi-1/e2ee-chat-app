@@ -1,0 +1,28 @@
+{
+  "name": "secure-chat-server",
+  "version": "1.0.0",
+  "description": "Backend for secure chat application (MERN skeleton)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "mongoose": "^9.4.1",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "comments": {
+    "future-dependencies": [
+      "mongoose      — MongoDB ODM (install when adding DB)",
+      "bcrypt        — Password hashing (install when adding auth)",
+      "jsonwebtoken  — JWT signing/verification (install when adding auth)",
+      "dotenv        — Environment variables (install when adding secrets)"
+    ]
+  }
+}

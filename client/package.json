@@ -1,0 +1,33 @@
+{
+  "name": "secure-chat-client",
+  "version": "1.0.0",
+  "description": "React frontend for secure chat application (MERN skeleton)",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "socket.io-client": "^4.7.2"
+  },
+  "comments": {
+    "future-dependencies": [
+      "axios   — HTTP requests (install when connecting to backend API)",
+      "react-router-dom — For page routing between Login / Register / Chat"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
