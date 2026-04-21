@@ -129,6 +129,7 @@ const Chat = ({ currentUser, onLogout }) => {
             currentUser={currentUser}
             keyExchangeStatus={keyExchangeStatus}
             isTyping={isTyping}
+            onLogout={onLogout}
           />
         )}
       </div>

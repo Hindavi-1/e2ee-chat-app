@@ -47,7 +47,8 @@ const useMessages = (sharedKey, contact, currentUser) => {
             try {
               const text = await aes.decryptMessage(msg.ciphertext, msg.iv, sharedKey);
               return formatMsg(msg, text);
-            } catch {
+            } catch (err) {
+              console.warn(`[useMessages] Decryption failed for history msg ${msg._id}:`, err);
               return formatMsg(msg, '[Could not decrypt]');
             }
           })
@@ -78,7 +79,8 @@ const useMessages = (sharedKey, contact, currentUser) => {
           ...prev,
           formatMsg({ ...payload, createdAt: payload.createdAt || new Date().toISOString() }, text),
         ]);
-      } catch {
+      } catch (err) {
+        console.warn(`[useMessages] Decryption failed for incoming msg ${payload._id}:`, err);
         setMessages((prev) => [...prev, formatMsg(payload, '[Could not decrypt]')]);
       }
     };
