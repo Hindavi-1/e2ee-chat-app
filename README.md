@@ -104,6 +104,8 @@ Encrypt msg with AES-GCM ─────→ Store ciphertext ──────�
 (sharedKey + random IV)          (never decrypts)              (same sharedKey + IV)
 ```
 
+**Note:** The server does NOT decrypt messages. It only stores and forwards encrypted data. This ensures true end-to-end encryption.
+
 ---
 
 ## 📋 API Endpoints

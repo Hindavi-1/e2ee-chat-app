@@ -1,114 +1,149 @@
-/**
- * hooks/useMessages.js
- * ---------------------
- * Custom React hook for loading, sending, and receiving chat messages.
- * Keeps message-related logic out of components, making them simpler.
- *
- * What this file does RIGHT NOW:
- *   - Loads mock messages on mount
- *   - Provides placeholder send/receive handlers
- *
- * What you will add LATER:
- *   - Fetch real messages via chatService.getMessages()
- *   - Decrypt each message with aes.decryptMessage() after fetching
- *   - Register socket listener via socketService.onMessage()
- *   - Encrypt outgoing messages with aes.encryptMessage() before sending
- */
-
-import { useState, useEffect } from 'react';
-
-// Mock messages for UI development (replace with real data later)
-const INITIAL_MOCK_MESSAGES = [
-  { id: 'msg-001', sender: 'alice', text: 'Hey! Is this channel secure?', timestamp: '10:00 AM' },
-  { id: 'msg-002', sender: 'You',   text: 'It will be once encryption is added!', timestamp: '10:01 AM' },
-  { id: 'msg-003', sender: 'alice', text: 'Cannot wait 🔐', timestamp: '10:02 AM' },
-];
+import { useState, useEffect, useRef } from 'react';
+import * as aes from '../crypto/aes';
+import * as socketService from '../services/socketService';
+import { getMessages as fetchMessages } from '../services/chatService';
 
 /**
- * useMessages()
- * @returns {{ messages, sendMessage, isLoading }}
+ * useMessages(sharedKey, contact, currentUser)
+ *
+ * Manages the full message lifecycle for an active conversation:
+ *  - Loads history from the API and decrypts each message
+ *  - Registers socket listeners for real-time incoming messages
+ *  - Encrypts outgoing messages and emits them via socket
  */
-const useMessages = () => {
-  const [messages, setMessages]   = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+const useMessages = (sharedKey, contact, currentUser) => {
+  const [messages,  setMessages]  = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping,  setIsTyping]  = useState(false); // the other person is typing
+  const typingTimeout = useRef(null);
 
-  // ── Load messages on mount ────────────────────────────────────────────────
+  // ── Helper: format a raw DB message for display ─────────────────────────
+  const formatMsg = (raw, decryptedText) => {
+    const isFromContact = raw.sender === contact?._id;
+    return {
+      _id:       raw._id,
+      sender:    raw.sender,
+      senderName: isFromContact ? contact.username : 'You',
+      text:      decryptedText,
+      timestamp: new Date(raw.createdAt || Date.now()).toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit',
+      }),
+    };
+  };
+
+  // ── Load history whenever the selected contact changes ──────────────────
   useEffect(() => {
-    const loadMessages = async () => {
+    if (!contact || !sharedKey) {
+      setMessages([]);
+      return;
+    }
+
+    const load = async () => {
       setIsLoading(true);
-
-      // TODO: const rawMessages = await chatService.getMessages();
-      // TODO: Decrypt each message:
-      //   const decrypted = await Promise.all(
-      //     rawMessages.map(msg => aes.decryptMessage(msg.ciphertext, msg.iv, sharedKey))
-      //   );
-      // TODO: setMessages(decrypted);
-
-      // Placeholder: use mock data
-      setTimeout(() => {
-        setMessages(INITIAL_MOCK_MESSAGES);
+      try {
+        const raw = await fetchMessages(contact._id);
+        const decrypted = await Promise.all(
+          raw.map(async (msg) => {
+            try {
+              const text = await aes.decryptMessage(msg.ciphertext, msg.iv, sharedKey);
+              return formatMsg(msg, text);
+            } catch {
+              return formatMsg(msg, '[Could not decrypt]');
+            }
+          })
+        );
+        setMessages(decrypted);
+      } catch (err) {
+        console.error('[useMessages] Failed to load history:', err);
+      } finally {
         setIsLoading(false);
-      }, 300);
+      }
     };
 
-    loadMessages();
+    load();
+  }, [contact?._id, sharedKey]);
 
-    // ── Register socket listener for incoming messages ──────────────────────
-    // TODO: socketService.onMessage(handleReceiveMessage);
-    // TODO: return () => socketService.offMessage(); // cleanup on unmount
-  }, []);
+  // ── Register socket listeners ────────────────────────────────────────────
+  useEffect(() => {
+    if (!sharedKey || !contact) return;
+
+    // Incoming message from the other person
+    const handleReceive = async (payload) => {
+      // Only process messages from the currently active contact
+      if (payload.sender !== contact._id) return;
+
+      try {
+        const text = await aes.decryptMessage(payload.ciphertext, payload.iv, sharedKey);
+        setMessages((prev) => [
+          ...prev,
+          formatMsg({ ...payload, createdAt: payload.createdAt || new Date().toISOString() }, text),
+        ]);
+      } catch {
+        setMessages((prev) => [...prev, formatMsg(payload, '[Could not decrypt]')]);
+      }
+    };
+
+    // Echo-back: the server confirmed our sent message was saved
+    const handleSent = async (payload) => {
+      // The optimistic message is already in state; do nothing (avoid duplicate)
+      // If you want server-confirmed replacement, implement deduplication by _id here
+    };
+
+    // Typing indicators
+    const handleTyping    = ({ senderId }) => { if (senderId === contact._id) setIsTyping(true);  };
+    const handleStopTyping = ({ senderId }) => { if (senderId === contact._id) setIsTyping(false); };
+
+    socketService.onMessage(handleReceive);
+    socketService.onMessageSent(handleSent);
+    socketService.onTyping(handleTyping);
+    socketService.onStopTyping(handleStopTyping);
+
+    return () => {
+      socketService.offMessage();
+      socketService.offMessageSent();
+      socketService.offTyping();
+      clearTimeout(typingTimeout.current);
+    };
+  }, [sharedKey, contact?._id]);
 
   // ── Send a message ────────────────────────────────────────────────────────
-  /**
-   * handleSendMessage()
-   * Called when the user submits a new message in ChatWindow.
-   *
-   * ENCRYPTION NOTE:
-   *   Step 1 — Encrypt:  const { ciphertext, iv } = await aes.encryptMessage(text, sharedKey);
-   *   Step 2 — Send:     socketService.sendMessage({ ciphertext, iv, recipientId });
-   *   Step 3 — Optionally persist via chatService.sendMessage(ciphertext, iv, recipientId);
-   *
-   * @param {string} text - The plaintext message the user typed
-   */
   const handleSendMessage = async (text) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !sharedKey || !contact) return;
 
-    // TODO: const { ciphertext, iv } = await aes.encryptMessage(text, sharedKey);
-    // TODO: socketService.sendMessage({ ciphertext, iv, recipientId });
+    try {
+      const { ciphertext, iv } = await aes.encryptMessage(text, sharedKey);
 
-    // Placeholder: add to local state directly (no encryption, no server)
-    const newMessage = {
-      id: `msg-${Date.now()}`,
-      sender: 'You',
-      text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages((prev) => [...prev, newMessage]);
+      // Optimistically add to UI immediately using the same format as real messages
+      const optimisticRaw = {
+        _id:       `opt-${Date.now()}`,
+        sender:    currentUser?._id || currentUser?.id,
+        createdAt: new Date().toISOString(),
+      };
+      const optimistic = formatMsg(optimisticRaw, text);
+      
+      setMessages((prev) => [...prev, optimistic]);
+
+      // Emit via socket (server will save + forward to recipient)
+      socketService.sendMessage({ receiverId: contact._id, ciphertext, iv });
+
+      // Stop typing indicator
+      socketService.emitStopTyping(contact._id);
+    } catch (err) {
+      console.error('[useMessages] Encryption/send failed:', err);
+    }
   };
 
-  // ── Receive a message ─────────────────────────────────────────────────────
-  /**
-   * handleReceiveMessage()
-   * Called by the socket listener when a new message arrives from the server.
-   *
-   * DECRYPTION NOTE:
-   *   const plaintext = await aes.decryptMessage(payload.ciphertext, payload.iv, sharedKey);
-   *
-   * @param {object} payload - { ciphertext, iv, from, timestamp }
-   */
-  const handleReceiveMessage = async (payload) => {
-    // TODO: const plaintext = await aes.decryptMessage(payload.ciphertext, payload.iv, sharedKey);
-
-    const newMessage = {
-      id: `msg-${Date.now()}`,
-      sender: payload.from || 'Unknown',
-      text: payload.ciphertext, // TODO: replace with decrypted plaintext
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages((prev) => [...prev, newMessage]);
+  // ── Typing indicator emit ────────────────────────────────────────────────
+  const handleTypingInput = () => {
+    if (!contact) return;
+    socketService.emitTyping(contact._id);
+    clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
+      socketService.emitStopTyping(contact._id);
+    }, 2000);
   };
 
-  return { messages, handleSendMessage, handleReceiveMessage, isLoading };
+  return { messages, handleSendMessage, handleTypingInput, isLoading, isTyping };
 };
 
 export default useMessages;

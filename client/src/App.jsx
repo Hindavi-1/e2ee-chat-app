@@ -20,77 +20,42 @@ import React, { useState } from 'react';
 import Login    from './pages/Login';
 import Register from './pages/Register';
 import Chat     from './pages/Chat';
-
-// Global reset styles (injected once)
-const globalStyles = `
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background-color: #020817;
-    color: #f1f5f9;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  input, textarea, button { font-family: inherit; }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #0f172a; }
-  ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-`;
+import * as socketService from './services/socketService';
+import './index.css';
 
 const App = () => {
-  // ── Page routing state ────────────────────────────────────────────────────
-  // 'login' | 'register' | 'chat'
   const [currentPage, setCurrentPage] = useState('login');
-
-  // ── Auth state ────────────────────────────────────────────────────────────
   const [currentUser, setCurrentUser] = useState(null);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
-
-  const handleLogin = ({ user, token }) => {
-    // TODO: Store token in AuthContext or memory
+  const handleLogin = ({ user }) => {
     setCurrentUser(user);
     setCurrentPage('chat');
   };
 
-  const handleRegister = ({ user, token }) => {
-    // After registration, auto-login the user
+  const handleRegister = ({ user }) => {
     setCurrentUser(user);
     setCurrentPage('chat');
   };
 
   const handleLogout = () => {
+    socketService.disconnect();
     setCurrentUser(null);
     setCurrentPage('login');
     localStorage.removeItem('token');
-    // TODO: Call socketService.disconnect() here
-    // TODO: Clear ECDH private key from memory
+    // Note: we intentionally keep the privateKey in localStorage
+    // so the user can reconnect from the same device without re-registering.
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Inject global CSS reset */}
-      <style>{globalStyles}</style>
-
       {currentPage === 'login' && (
-        <Login
-          onLogin={handleLogin}
-          onGoRegister={() => setCurrentPage('register')}
-        />
+        <Login onLogin={handleLogin} onGoRegister={() => setCurrentPage('register')} />
       )}
-
       {currentPage === 'register' && (
-        <Register
-          onRegister={handleRegister}
-          onGoLogin={() => setCurrentPage('login')}
-        />
+        <Register onRegister={handleRegister} onGoLogin={() => setCurrentPage('login')} />
       )}
-
       {currentPage === 'chat' && currentUser && (
-        <Chat
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        />
+        <Chat currentUser={currentUser} onLogout={handleLogout} />
       )}
     </>
   );

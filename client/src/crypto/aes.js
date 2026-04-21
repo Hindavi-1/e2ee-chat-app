@@ -22,6 +22,32 @@
  */
 
 /**
+ * Helper: Converts ArrayBuffer/Uint8Array to Base64 string robustly.
+ */
+function bufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+/**
+ * Helper: Converts Base64 string to Uint8Array robustly.
+ */
+function base64ToBuffer(base64) {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
  * encryptMessage()
  * Encrypts a plaintext message using AES-GCM.
  *
@@ -30,31 +56,28 @@
  * @returns {Promise<{ ciphertext: string, iv: string }>}
  */
 export const encryptMessage = async (plaintext, aesKey) => {
-  // TODO: Implement using Web Crypto API:
-  //
-  // Step 1 — Generate a random 96-bit IV (must be unique for every message!)
-  // const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  //
-  // Step 2 — Encode the plaintext as bytes
-  // const encodedText = new TextEncoder().encode(plaintext);
-  //
-  // Step 3 — Encrypt
-  // const encrypted = await window.crypto.subtle.encrypt(
-  //   { name: 'AES-GCM', iv },
-  //   aesKey,
-  //   encodedText
-  // );
-  //
-  // Step 4 — Convert to base64 for JSON transport
-  // return {
-  //   ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
-  //   iv:         btoa(String.fromCharCode(...iv)),
-  // };
+  const crypto = window.crypto || window.msCrypto;
+  if (!crypto || !crypto.subtle) {
+    throw new Error('Cryptography API is unavailable. Ensure you are in a Secure Context (HTTPS or localhost).');
+  }
 
-  console.log('[aes.js] encryptMessage() — placeholder, not implemented');
+  // Step 1 — Generate a random 96-bit IV (must be unique for every message!)
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  
+  // Step 2 — Encode the plaintext as bytes
+  const encodedText = new TextEncoder().encode(plaintext);
+  
+  // Step 3 — Encrypt
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    aesKey,
+    encodedText
+  );
+  
+  // Step 4 — Convert to base64 for JSON transport
   return {
-    ciphertext: `encrypted(${plaintext})`,
-    iv: 'placeholder-iv',
+    ciphertext: bufferToBase64(encrypted),
+    iv:         bufferToBase64(iv),
   };
 };
 
@@ -68,22 +91,22 @@ export const encryptMessage = async (plaintext, aesKey) => {
  * @returns {Promise<string>}    - Decrypted plaintext
  */
 export const decryptMessage = async (ciphertext, iv, aesKey) => {
-  // TODO: Implement using Web Crypto API:
-  //
-  // Step 1 — Decode from base64 back to bytes
-  // const ciphertextBytes = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
-  // const ivBytes         = Uint8Array.from(atob(iv),         c => c.charCodeAt(0));
-  //
-  // Step 2 — Decrypt
-  // const decrypted = await window.crypto.subtle.decrypt(
-  //   { name: 'AES-GCM', iv: ivBytes },
-  //   aesKey,
-  //   ciphertextBytes
-  // );
-  //
-  // Step 3 — Decode bytes back to a string
-  // return new TextDecoder().decode(decrypted);
+  const crypto = window.crypto || window.msCrypto;
+  if (!crypto || !crypto.subtle) {
+    throw new Error('Cryptography API is unavailable.');
+  }
 
-  console.log('[aes.js] decryptMessage() — placeholder, not implemented');
-  return `decrypted(${ciphertext})`;
+  // Step 1 — Decode from base64 back to bytes
+  const ciphertextBytes = base64ToBuffer(ciphertext);
+  const ivBytes         = base64ToBuffer(iv);
+  
+  // Step 2 — Decrypt
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: ivBytes },
+    aesKey,
+    ciphertextBytes
+  );
+  
+  // Step 3 — Decode bytes back to a string
+  return new TextDecoder().decode(decrypted);
 };

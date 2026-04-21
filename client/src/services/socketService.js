@@ -1,87 +1,83 @@
-/**
- * services/socketService.js
- * --------------------------
- * Manages the Socket.IO connection for real-time messaging.
- *
- * What this file does RIGHT NOW:
- *   - Exports placeholder connect/disconnect/send functions that only log
- *
- * What you will add LATER:
- *   - Create a real Socket.IO connection using socket.io-client
- *   - Pass the JWT token in the handshake for authentication
- *   - Emit encrypted messages and receive incoming ones
- *
- * ── Key design note (encryption) ─────────────────────────────────────────
- * Messages must be AES-ENCRYPTED before emitting via sendMessage().
- * When receiving via onMessage(), the payload is still ciphertext —
- * decrypt it in the component using aes.decryptMessage().
- */
+import { io } from 'socket.io-client';
 
-// Will hold the socket.io-client instance once connected
 let socket = null;
 
 /**
- * connect()
- * Establishes the Socket.IO connection to the server.
- *
- * @param {string} token - JWT token for authentication (passed in handshake)
+ * connect() — opens an authenticated Socket.IO connection
  */
 export const connect = (token) => {
-  console.log('[socketService] connect() placeholder called');
+  if (socket?.connected) return socket;
 
-  // TODO: Install socket.io-client: npm install socket.io-client
-  // TODO: Implement:
-  // import { io } from 'socket.io-client';
-  // socket = io('http://localhost:5000', {
-  //   auth: { token },  // server reads this in socket.handshake.auth.token
-  // });
-  // socket.on('connect', () => console.log('Socket connected:', socket.id));
-  // socket.on('connect_error', (err) => console.error('Socket error:', err.message));
+  socket = io('http://localhost:5000', {
+    auth: { token },
+    transports: ['websocket'],
+  });
+
+  socket.on('connect', () =>
+    console.log('[socket] Connected:', socket.id)
+  );
+  socket.on('connect_error', (err) =>
+    console.error('[socket] Connection error:', err.message)
+  );
+
+  return socket;
 };
 
-/**
- * disconnect()
- * Cleanly closes the Socket.IO connection.
- */
+/** disconnect() */
 export const disconnect = () => {
-  console.log('[socketService] disconnect() placeholder called');
-  // TODO: if (socket) socket.disconnect();
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
 };
 
 /**
- * sendMessage()
- * Emits an encrypted message to the server via socket.
- *
- * @param {object} payload - { recipientId, ciphertext, iv }
- *
- * ENCRYPTION NOTE:
- *   Always encrypt BEFORE calling this function.
- *   payload.ciphertext must be the AES-encrypted content.
+ * sendMessage() — emits an encrypted message to the server
+ * @param {{ receiverId, ciphertext, iv }} payload
  */
 export const sendMessage = (payload) => {
-  console.log('[socketService] sendMessage() placeholder — payload:', payload);
-  // TODO: if (socket) socket.emit('sendMessage', payload);
+  if (socket?.connected) {
+    socket.emit('sendMessage', payload);
+  } else {
+    console.warn('[socket] sendMessage called but socket is not connected');
+  }
 };
 
 /**
- * onMessage()
- * Registers a callback to run whenever a new message is received.
- *
- * @param {Function} callback - Called with the message payload: { ciphertext, iv, from, timestamp }
- *
- * DECRYPTION NOTE:
- *   The received payload contains ciphertext — decrypt it in your component or hook.
+ * onMessage() — register a callback for incoming messages from others
  */
 export const onMessage = (callback) => {
-  console.log('[socketService] onMessage() placeholder — listener registered');
-  // TODO: if (socket) socket.on('receiveMessage', callback);
+  if (socket) socket.on('receiveMessage', callback);
 };
 
 /**
- * offMessage()
- * Removes the message listener (important for cleanup in useEffect).
+ * onMessageSent() — register a callback for the echo-back of your own sent message
  */
-export const offMessage = () => {
-  // TODO: if (socket) socket.off('receiveMessage');
-  console.log('[socketService] offMessage() placeholder called');
+export const onMessageSent = (callback) => {
+  if (socket) socket.on('messageSent', callback);
 };
+
+/** offMessage() — remove the incoming message listener */
+export const offMessage = () => {
+  if (socket) socket.off('receiveMessage');
+};
+
+/** offMessageSent() */
+export const offMessageSent = () => {
+  if (socket) socket.off('messageSent');
+};
+
+/** emitTyping / emitStopTyping */
+export const emitTyping = (receiverId) => {
+  if (socket?.connected) socket.emit('typing', { receiverId });
+};
+export const emitStopTyping = (receiverId) => {
+  if (socket?.connected) socket.emit('stopTyping', { receiverId });
+};
+
+/** onTyping / onStopTyping */
+export const onTyping = (cb) => { if (socket) socket.on('typing', cb); };
+export const onStopTyping = (cb) => { if (socket) socket.on('stopTyping', cb); };
+export const offTyping = () => { if (socket) { socket.off('typing'); socket.off('stopTyping'); } };
+
+export const getSocket = () => socket;

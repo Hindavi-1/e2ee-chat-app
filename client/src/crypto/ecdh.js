@@ -20,22 +20,49 @@
  */
 
 /**
+ * Helper: Converts ArrayBuffer/Uint8Array to Base64 string robustly.
+ */
+function bufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+/**
+ * Helper: Converts Base64 string to Uint8Array robustly.
+ */
+function base64ToBuffer(base64) {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
  * generateKeyPair()
  * Generates an ECDH P-256 key pair for this user session.
  *
  * @returns {Promise<{ publicKey: CryptoKey, privateKey: CryptoKey }>}
  */
 export const generateKeyPair = async () => {
-  // TODO: Implement using Web Crypto API:
-  // const keyPair = await window.crypto.subtle.generateKey(
-  //   { name: 'ECDH', namedCurve: 'P-256' },
-  //   true,           // extractable — so we can export the public key to share it
-  //   ['deriveKey', 'deriveBits']
-  // );
-  // return keyPair;  // { publicKey, privateKey }
+  const crypto = window.crypto || window.msCrypto;
+  if (!crypto || !crypto.subtle) {
+    throw new Error('Cryptography API is unavailable. This usually happens when the site is not served over HTTPS or localhost (Secure Context).');
+  }
 
-  console.log('[ecdh.js] generateKeyPair() — placeholder, not implemented');
-  return { publicKey: 'placeholder-public-key', privateKey: 'placeholder-private-key' };
+  const keyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true, // extractable so we can export both public and private keys
+    ['deriveKey', 'deriveBits']
+  );
+  return keyPair;
 };
 
 /**
@@ -46,12 +73,9 @@ export const generateKeyPair = async () => {
  * @returns {Promise<string>} - Base64-encoded public key
  */
 export const exportPublicKey = async (publicKey) => {
-  // TODO: Implement:
-  // const exported = await window.crypto.subtle.exportKey('raw', publicKey);
-  // return btoa(String.fromCharCode(...new Uint8Array(exported)));
-
-  console.log('[ecdh.js] exportPublicKey() — placeholder, not implemented');
-  return 'placeholder-exported-public-key';
+  const crypto = window.crypto || window.msCrypto;
+  const exported = await crypto.subtle.exportKey('raw', publicKey);
+  return bufferToBase64(exported);
 };
 
 /**
@@ -62,35 +86,56 @@ export const exportPublicKey = async (publicKey) => {
  * @returns {Promise<CryptoKey>}
  */
 export const importPublicKey = async (base64Key) => {
-  // TODO: Implement:
-  // const raw = Uint8Array.from(atob(base64Key), c => c.charCodeAt(0));
-  // return await window.crypto.subtle.importKey(
-  //   'raw', raw, { name: 'ECDH', namedCurve: 'P-256' }, true, []
-  // );
-
-  console.log('[ecdh.js] importPublicKey() — placeholder, not implemented');
-  return 'placeholder-imported-key';
+  const crypto = window.crypto || window.msCrypto;
+  const raw = base64ToBuffer(base64Key);
+  return await crypto.subtle.importKey(
+    'raw', raw, { name: 'ECDH', namedCurve: 'P-256' }, true, []
+  );
 };
 
 /**
  * deriveSharedKey()
  * Computes the shared AES key from my private key and the other user's public key.
- * This AES key is what actually encrypts/decrypts messages.
  *
  * @param {CryptoKey} myPrivateKey       - This user's private ECDH key
  * @param {CryptoKey} theirPublicKey     - The other user's imported public key
  * @returns {Promise<CryptoKey>}         - An AES-GCM key ready for encryption
  */
 export const deriveSharedKey = async (myPrivateKey, theirPublicKey) => {
-  // TODO: Implement:
-  // return await window.crypto.subtle.deriveKey(
-  //   { name: 'ECDH', public: theirPublicKey },
-  //   myPrivateKey,
-  //   { name: 'AES-GCM', length: 256 },
-  //   false,          // not extractable — the raw key bytes stay inside the browser
-  //   ['encrypt', 'decrypt']
-  // );
+  const crypto = window.crypto || window.msCrypto;
+  return await crypto.subtle.deriveKey(
+    { name: 'ECDH', public: theirPublicKey },
+    myPrivateKey,
+    { name: 'AES-GCM', length: 256 },
+    false, // not extractable
+    ['encrypt', 'decrypt']
+  );
+};
 
-  console.log('[ecdh.js] deriveSharedKey() — placeholder, not implemented');
-  return 'placeholder-shared-aes-key';
+/**
+ * exportPrivateKey()
+ * Exports a private CryptoKey to a base64 string for local storage.
+ *
+ * @param {CryptoKey} privateKey
+ * @returns {Promise<string>} - Base64-encoded private key
+ */
+export const exportPrivateKey = async (privateKey) => {
+  const crypto = window.crypto || window.msCrypto;
+  const exported = await crypto.subtle.exportKey('pkcs8', privateKey);
+  return bufferToBase64(exported);
+};
+
+/**
+ * importPrivateKey()
+ * Converts a base64 private key string back into a CryptoKey.
+ *
+ * @param {string} base64Key
+ * @returns {Promise<CryptoKey>}
+ */
+export const importPrivateKey = async (base64Key) => {
+  const crypto = window.crypto || window.msCrypto;
+  const raw = base64ToBuffer(base64Key);
+  return await crypto.subtle.importKey(
+    'pkcs8', raw, { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey', 'deriveBits']
+  );
 };
