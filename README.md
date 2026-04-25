@@ -1,66 +1,46 @@
-# 🔐 SecureChat — MERN Stack Skeleton
+# 🔐 SecureChat — End-to-End Encrypted MERN Chat
 
-A clean, well-documented starting skeleton for a secure, end-to-end encrypted chat application.
+A secure, end-to-end encrypted chat application built with the MERN stack (MongoDB, Express, React, Node.js) featuring real-time messaging, secure key exchange, and a premium user interface.
 
-> **This is a skeleton only.** No real authentication, encryption, or database logic is implemented.
-> All crypto files contain detailed comments explaining exactly what to implement and how.
+---
+
+## ✨ Features
+
+- **End-to-End Encryption (E2EE):** Messages are encrypted locally on the client using AES-GCM and keys are exchanged securely via Elliptic-Curve Diffie-Hellman (ECDH). The server never sees the plaintext.
+- **Real-Time Messaging:** Instant bidirectional communication powered by Socket.IO.
+- **Authentication:** Secure user registration and login using bcrypt for password hashing and JWT for session management.
+- **Modern UI/UX:** Responsive, premium design with Framer Motion animations and dark mode support.
+- **Persistent Storage:** Encrypted messages are securely stored in MongoDB for seamless chat history retrieval.
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 secure-chat/
 ├── client/                        # React frontend
 │   ├── public/
 │   │   └── index.html
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── ChatWindow.jsx     # Message area + input box
-│   │   │   ├── MessageBubble.jsx  # Single message bubble
-│   │   │   └── Sidebar.jsx        # Contact list
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx    # Auth state shared across app
-│   │   ├── crypto/                ⚠️  PLACEHOLDERS ONLY
-│   │   │   ├── aes.js             # AES-GCM encrypt/decrypt (client-side)
-│   │   │   └── ecdh.js            # ECDH key generation & key exchange
-│   │   ├── hooks/
-│   │   │   └── useMessages.js     # Message state + send/receive logic
-│   │   ├── pages/
-│   │   │   ├── Chat.jsx           # Main chat page (Sidebar + ChatWindow)
-│   │   │   ├── Login.jsx          # Login form
-│   │   │   └── Register.jsx       # Registration form
-│   │   ├── services/
-│   │   │   ├── api.js             # Central HTTP client (fetch wrapper)
-│   │   │   ├── authService.js     # Login / register API calls
-│   │   │   ├── chatService.js     # Message fetch / send API calls
-│   │   │   └── socketService.js   # Socket.IO connection management
-│   │   ├── App.jsx                # Root component + page routing
+│   │   ├── components/            # Reusable UI components
+│   │   ├── context/               # React Context for global state
+│   │   ├── crypto/                # Web Crypto API implementations (AES, ECDH)
+│   │   ├── hooks/                 # Custom React hooks
+│   │   ├── pages/                 # Main application views
+│   │   ├── services/              # API clients and Socket.IO management
+│   │   ├── App.jsx                # Root component + routing
 │   │   └── index.js               # React entry point
 │   └── package.json
 │
 └── server/                        # Node.js + Express backend
-    ├── config/
-    │   └── db.js                  # MongoDB connection (placeholder)
-    ├── controllers/
-    │   ├── authController.js      # Register / login handlers
-    │   └── chatController.js      # Get / send message handlers
-    ├── crypto/                    ⚠️  PLACEHOLDERS ONLY
-    │   ├── hash.js                # bcrypt password hashing
-    │   └── jwt.js                 # JWT sign / verify
-    ├── middleware/
-    │   └── authMiddleware.js      # JWT verification middleware (placeholder)
-    ├── models/
-    │   ├── Message.js             # Message schema (placeholder)
-    │   └── User.js                # User schema (placeholder)
-    ├── routes/
-    │   ├── authRoutes.js          # POST /api/auth/register, /api/auth/login
-    │   └── chatRoutes.js          # GET /api/messages, POST /api/messages
-    ├── services/
-    │   ├── authService.js         # Register / login business logic
-    │   └── chatService.js         # Message fetch / save business logic
-    ├── sockets/
-    │   └── chatSocket.js          # Socket.IO real-time event handlers
+    ├── config/                    # MongoDB and environment configurations
+    ├── controllers/               # Route handlers (Auth, Chat)
+    ├── crypto/                    # Server-side crypto (bcrypt, JWT)
+    ├── middleware/                # Express middlewares (Auth verification)
+    ├── models/                    # Mongoose database schemas
+    ├── routes/                    # API route definitions
+    ├── services/                  # Business logic (Auth, Chat)
+    ├── sockets/                   # Socket.IO event handlers
     ├── server.js                  # Express app entry point
     └── package.json
 ```
@@ -69,14 +49,19 @@ secure-chat/
 
 ## 🚀 Getting Started
 
-### Backend
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB (Local instance or MongoDB Atlas cluster)
+
+### Backend Setup
 ```bash
 cd server
 npm install
+# Create a .env file with your MONGO_URI and JWT_SECRET
 npm run dev        # uses nodemon for auto-reload
 ```
 
-### Frontend
+### Frontend Setup
 ```bash
 cd client
 npm install
@@ -85,9 +70,9 @@ npm start          # starts React dev server on http://localhost:3000
 
 ---
 
-## 🔒 Security Architecture (to implement)
+## 🔒 Security Architecture
 
-```
+```text
 CLIENT A                        SERVER                         CLIENT B
 ────────                        ──────                         ────────
 Generate ECDH key pair          Store public keys only
@@ -114,32 +99,5 @@ Encrypt msg with AES-GCM ─────→ Store ciphertext ──────�
 |--------|-----------------------|-------------------------------|---------------|
 | POST   | /api/auth/register    | Create new user account        | No            |
 | POST   | /api/auth/login       | Login and receive JWT token    | No            |
-| GET    | /api/messages         | Fetch messages for current user| Yes (TODO)    |
-| POST   | /api/messages         | Send an encrypted message      | Yes (TODO)    |
-
----
-
-## ✅ Implementation Checklist
-
-**Phase 1 — Database**
-- [ ] Set up MongoDB Atlas or local MongoDB
-- [ ] Implement real User and Message Mongoose models
-- [ ] Connect via `config/db.js`
-
-**Phase 2 — Authentication**
-- [ ] Implement `crypto/hash.js` with bcrypt
-- [ ] Implement `crypto/jwt.js` with jsonwebtoken
-- [ ] Complete `services/authService.js` (real register + login)
-- [ ] Complete `middleware/authMiddleware.js` (JWT verification)
-- [ ] Complete `controllers/authController.js`
-
-**Phase 3 — Encryption**
-- [ ] Implement `client/src/crypto/ecdh.js` (Web Crypto API)
-- [ ] Implement `client/src/crypto/aes.js` (Web Crypto API)
-- [ ] Wire encryption into `hooks/useMessages.js`
-- [ ] Wire ECDH key exchange into `pages/Chat.jsx`
-
-**Phase 4 — Real-time**
-- [ ] Complete `sockets/chatSocket.js` (auth + rooms)
-- [ ] Complete `services/socketService.js` on client
-- [ ] Connect socket in `pages/Chat.jsx`
+| GET    | /api/messages/:id     | Fetch messages for a contact   | Yes           |
+| POST   | /api/messages         | Send an encrypted message      | Yes           |
