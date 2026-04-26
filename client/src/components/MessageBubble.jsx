@@ -9,13 +9,15 @@ import React from 'react';
 const StatusTick = ({ status }) => {
   if (!status) return null;
 
-  const color = status === 'seen' ? '#4FC3F7' : 'rgba(255,255,255,0.5)';
+  // 'seen' → bright white so ticks are visible on the blue sender bubble
+  // 'delivered' → semi-transparent white
+  const color = status === 'seen' ? '#3403f6ff' : 'rgba(201, 194, 194, 0.96)';
 
   // Single tick (sent)
   if (status === 'sent') {
     return (
       <svg width="14" height="10" viewBox="0 0 14 10" fill="none" style={{ display: 'inline-block', verticalAlign: 'middle' }} title="Sent">
-        <path d="M1 5l3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M1 5l3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
@@ -24,19 +26,19 @@ const StatusTick = ({ status }) => {
   return (
     <svg width="18" height="10" viewBox="0 0 18 10" fill="none" style={{ display: 'inline-block', verticalAlign: 'middle' }} title={status === 'seen' ? 'Seen' : 'Delivered'}>
       {/* First tick */}
-      <path d="M1 5l3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M1 5l3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       {/* Second tick (offset right) */}
-      <path d="M5 5l3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M5 5l3 3 6-7" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 };
 
-const MessageBubble = ({ message, isOwn }) => {
+const MessageBubble = ({ message, isOwn, isGroupChat = false }) => {
   return (
     <div className={`msg-row ${isOwn ? 'own' : 'other'}`}>
       <div className={`msg-bubble ${isOwn ? 'own' : 'other'}`}>
-        {/* Sender name — only for incoming messages */}
-        {!isOwn && message.senderName && (
+        {/* Sender name — only for incoming messages in group chats */}
+        {!isOwn && isGroupChat && message.senderName && (
           <div className="msg-sender">{message.senderName}</div>
         )}
 
