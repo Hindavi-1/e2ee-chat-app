@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const { verifyToken } = require('../crypto/jwt');
 const chatService    = require('../services/chatService');
+const Message        = require('../models/Message');
 
 // Maps userId (string) → socket.id so we can route messages to the right socket
 const userSocketMap = {};
@@ -76,6 +77,31 @@ const initSocket = (server) => {
 
     socket.on('stopTyping', ({ receiverId }) => {
       io.to(`user-${receiverId}`).emit('stopTyping', { senderId: userId });
+    });
+
+    // ── Message Status Updates ───────────────────────────────────────────────
+    socket.on('messageDelivered', async ({ messageId, senderId }) => {
+      try {
+        await Message.findByIdAndUpdate(messageId, { status: 'delivered' });
+        // Notify the original sender that their message was delivered
+        io.to(`user-${senderId}`).emit('messageDelivered', { messageId });
+      } catch (err) {
+        console.error('[socket] messageDelivered error:', err.message);
+      }
+    });
+
+    socket.on('messagesSeen', async ({ senderId }) => {
+      try {
+        // Update all unread messages from this sender to 'seen'
+        await Message.updateMany(
+          { sender: senderId, receiver: userId, status: { $ne: 'seen' } },
+          { status: 'seen' }
+        );
+        // Notify the sender that their messages were seen
+        io.to(`user-${senderId}`).emit('messagesSeen', { receiverId: userId });
+      } catch (err) {
+        console.error('[socket] messagesSeen error:', err.message);
+      }
     });
 
     // ── Disconnect ───────────────────────────────────────────────────────────

@@ -80,4 +80,17 @@ export const onTyping = (cb) => { if (socket) socket.on('typing', cb); };
 export const onStopTyping = (cb) => { if (socket) socket.on('stopTyping', cb); };
 export const offTyping = () => { if (socket) { socket.off('typing'); socket.off('stopTyping'); } };
 
+/** Read Receipts (Delivered / Seen) */
+export const emitMessageDelivered = (messageId, senderId) => {
+  if (socket?.connected) socket.emit('messageDelivered', { messageId, senderId });
+};
+export const emitMessagesSeen = (senderId) => {
+  if (socket?.connected) socket.emit('messagesSeen', { senderId });
+};
+
+export const onMessageDelivered = (cb) => { if (socket) socket.on('messageDelivered', cb); };
+export const onMessagesSeen = (cb) => { if (socket) socket.on('messagesSeen', cb); };
+export const offMessageDelivered = () => { if (socket) socket.off('messageDelivered'); };
+export const offMessagesSeen = () => { if (socket) socket.off('messagesSeen'); };
+
 export const getSocket = () => socket;

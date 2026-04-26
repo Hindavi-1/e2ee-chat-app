@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar    from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
 import useMessages from '../hooks/useMessages';
@@ -19,37 +19,77 @@ const useIsMobile = () => {
 };
 
 const Chat = ({ currentUser, onLogout }) => {
-  const [contacts,           setContacts]           = useState([]);
-  const [selectedContact,    setSelectedContact]    = useState(null);
-  const [sharedKey,          setSharedKey]          = useState(null);
-  const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [keyExchangeStatus,  setKeyExchangeStatus]  = useState('idle'); // 'idle' | 'loading' | 'ready' | 'error'
+  const [contacts,            setContacts]           = useState([]);
+  const [selectedContact,     setSelectedContact]    = useState(null);
+  const [sharedKey,           setSharedKey]          = useState(null);
+  const [isMobileSidebarOpen, setMobileSidebarOpen]  = useState(false);
+  const [keyExchangeStatus,   setKeyExchangeStatus]  = useState('idle');
 
   const isMobile = useIsMobile();
 
-  const { messages, handleSendMessage, handleTypingInput, isLoading, isTyping } =
-    useMessages(sharedKey, selectedContact, currentUser);
+  /**
+   * onContactActivity — called by useMessages when:
+   *  - an incoming message arrives from a non-active contact (isSelf = false)
+   *  - the current user sends a message (isSelf = true)
+   *
+   * It moves the relevant contact to the top of the sidebar and,
+   * for incoming messages from non-active contacts, increments unreadCount.
+   */
+  const onContactActivity = useCallback((contactId, timestamp, isSelf = false) => {
+    setContacts((prev) => {
+      return prev.map((c) => {
+        if (c._id?.toString() !== contactId?.toString()) return c;
+        return {
+          ...c,
+          lastMessageAt: timestamp,
+          // Only increment badge if NOT the self-sent case and NOT currently selected
+          unreadCount: (!isSelf && selectedContact?._id?.toString() !== contactId?.toString())
+            ? (c.unreadCount || 0) + 1
+            : c.unreadCount,
+        };
+      }).sort((a, b) => {
+        const ta = a.lastMessageAt ? new Date(a.lastMessageAt) : new Date(0);
+        const tb = b.lastMessageAt ? new Date(b.lastMessageAt) : new Date(0);
+        return tb - ta;
+      });
+    });
+  }, [selectedContact]);
 
-  // ── Connect socket on mount ───────────────────────────────────────────────
+  const { messages, handleSendMessage, handleTypingInput, isLoading, isTyping } =
+    useMessages(sharedKey, selectedContact, currentUser, onContactActivity);
+
+  // ── Connect socket on mount ────────────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem('token');
     socketService.connect(token);
     return () => socketService.disconnect();
   }, []);
 
-  // ── Fetch contact list ────────────────────────────────────────────────────
+  // ── Fetch contact list + sort by lastMessageAt ─────────────────────────
   useEffect(() => {
     getContacts()
-      .then(setContacts)
+      .then((users) => {
+        const sorted = [...users].sort((a, b) => {
+          const ta = a.lastMessageAt ? new Date(a.lastMessageAt) : new Date(0);
+          const tb = b.lastMessageAt ? new Date(b.lastMessageAt) : new Date(0);
+          return tb - ta;
+        });
+        setContacts(sorted);
+      })
       .catch((e) => console.error('[Chat] Failed to load contacts:', e));
   }, []);
 
-  // ── Handle contact selection + ECDH key exchange ─────────────────────────
+  // ── Handle contact selection + ECDH key exchange ──────────────────────
   const handleSelectContact = async (contact) => {
     setSelectedContact(contact);
     setSharedKey(null);
     setKeyExchangeStatus('loading');
     setMobileSidebarOpen(false);
+
+    // Reset unread count for this contact
+    setContacts((prev) =>
+      prev.map((c) => c._id === contact._id ? { ...c, unreadCount: 0 } : c)
+    );
 
     try {
       const privateKeyStr = localStorage.getItem(`privateKey_${currentUser.email}`);
@@ -57,7 +97,6 @@ const Chat = ({ currentUser, onLogout }) => {
 
       const myPrivateKey = await ecdh.importPrivateKey(privateKeyStr);
 
-      // Fetch their public key from the server
       const { publicKey: theirPublicKeyStr } = await apiRequest(`/users/${contact._id}/publicKey`);
       if (!theirPublicKeyStr) throw new Error('Contact has no public key yet.');
 
@@ -72,13 +111,13 @@ const Chat = ({ currentUser, onLogout }) => {
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────
   const showSidebar = !isMobile || isMobileSidebarOpen;
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--bg-base)', position: 'relative' }}>
 
-      {/* ── Sidebar ────────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       {showSidebar && (
         <>
           {isMobile && (
@@ -97,7 +136,7 @@ const Chat = ({ currentUser, onLogout }) => {
         </>
       )}
 
-      {/* ── Chat Window ───────────────────────────────────────────────────── */}
+      {/* ── Chat Window ─────────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
 
         {/* Mobile top bar */}
