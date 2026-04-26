@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const AVATAR_COLORS = [
   'linear-gradient(135deg, #6366F1, #3B82F6)', /* Indigo to Blue */
@@ -10,6 +10,14 @@ const AVATAR_COLORS = [
 const getColor = (name = '') => AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 
 const Sidebar = ({ contacts, selectedContact, onSelectContact, currentUser, onLogout }) => {
+  const [query, setQuery] = useState('');
+
+  const filtered = query.trim()
+    ? contacts.filter(c =>
+      c.username.toLowerCase().includes(query.trim().toLowerCase())
+    )
+    : contacts;
+
   return (
     <aside className="sidebar">
       {/* ── Header ─────────────────────────────────────────────────── */}
@@ -28,13 +36,41 @@ const Sidebar = ({ contacts, selectedContact, onSelectContact, currentUser, onLo
       </div>
 
       {/* ── Search ─────────────────────────────────────────────────── */}
-      <div className="sidebar-search-wrap">
-        <input type="text" className="sidebar-search" placeholder="Search contacts…" />
+      <div className="sidebar-search-wrap" style={{ position: 'relative' }}>
+        <input
+          type="text"
+          className="sidebar-search"
+          placeholder="Search contacts…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          style={query ? { paddingRight: '36px' } : {}}
+        />
+        {query && (
+          <button
+            onClick={() => setQuery('')}
+            title="Clear search"
+            style={{
+              position: 'absolute', right: 30, top: '40%',
+              transform: 'translateY(-60%)',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', fontSize: 15, lineHeight: 1,
+              display: 'flex', alignItems: 'center', padding: 0,
+              transition: 'color 150ms',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* ── Section Label ──────────────────────────────────────────── */}
       <div className="sidebar-section-label">
-        {contacts.length > 0 ? `${contacts.length} contacts` : 'No contacts yet'}
+        {query.trim()
+          ? `${filtered.length} of ${contacts.length} contacts`
+          : contacts.length > 0 ? `${contacts.length} contacts` : 'No contacts yet'
+        }
       </div>
 
       {/* ── Contact List ───────────────────────────────────────────── */}
@@ -44,9 +80,18 @@ const Sidebar = ({ contacts, selectedContact, onSelectContact, currentUser, onLo
             Register another user to start chatting
           </div>
         )}
-        {contacts.map((contact) => {
+        {contacts.length > 0 && filtered.length === 0 && (
+          <div style={{ padding: '32px 16px', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span>No contacts match <strong style={{ color: 'var(--text-secondary)' }}>{query}</strong></span>
+          </div>
+        )}
+        {filtered.map((contact) => {
           const isSelected = selectedContact?._id === contact._id;
-          const hasUnread  = contact.unreadCount > 0;
+          const hasUnread = contact.unreadCount > 0;
           return (
             <div
               key={contact._id}
