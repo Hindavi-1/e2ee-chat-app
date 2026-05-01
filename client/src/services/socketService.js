@@ -5,19 +5,42 @@ let socket = null;
 /**
  * connect() — opens an authenticated Socket.IO connection
  */
+
+// export const connect = (token) => {
+//   if (socket?.connected) return socket;
+
+//   socket = io('http://localhost:5000', {
+//     auth: { token },
+//     transports: ['websocket'],
+//   });
+
+//   socket.on('connect', () =>
+//     console.log('[socket] Connected:', socket.id)
+//   );
+//   socket.on('connect_error', (err) =>
+//     console.error('[socket] Connection error:', err.message)
+//   );
+
+//   return socket;
+// };
+
 export const connect = (token) => {
   if (socket?.connected) return socket;
 
-  socket = io('http://localhost:5000', {
+  const BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  socket = io(BASE_URL, {
     auth: { token },
-    transports: ['websocket'],
+    transports: ["websocket"],
   });
 
-  socket.on('connect', () =>
-    console.log('[socket] Connected:', socket.id)
+  socket.on("connect", () =>
+    console.log("[socket] Connected:", socket.id)
   );
-  socket.on('connect_error', (err) =>
-    console.error('[socket] Connection error:', err.message)
+
+  socket.on("connect_error", (err) =>
+    console.error("[socket] Connection error:", err.message)
   );
 
   return socket;
