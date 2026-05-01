@@ -18,7 +18,23 @@ const app    = express();
 const server = http.createServer(app);
 
 // ── Middleware ──────────────────────────────────────────────────────────────
-app.use(cors());
+// app.use(cors());
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.CLIENT_URL
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // ── API Routes ──────────────────────────────────────────────────────────────
