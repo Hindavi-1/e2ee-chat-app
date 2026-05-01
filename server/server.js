@@ -19,12 +19,13 @@ const server = http.createServer(app);
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 // app.use(cors());
+// ── Middleware ──────────────────────────────────────────────
 const allowedOrigins = [
   "http://localhost:3000",
   process.env.CLIENT_URL
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -32,10 +33,15 @@ app.use(cors({
       callback(new Error("CORS not allowed"));
     }
   },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
-}));
+};
 
-app.use(express.json());
+// ✅ Order matters
+app.use(express.json());          // 1️⃣ parse body first
+app.use(cors(corsOptions));       // 2️⃣ then CORS
+app.options("*", cors(corsOptions)); // 3️⃣ preflight
 
 // ── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth',     authRoutes);
