@@ -30,6 +30,9 @@ export const connect = (token) => {
   const BASE_URL =
     import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+  const BASE_URL =
+    "https://e2ee-chat-app-o3rx.onrender.com" || "http://localhost:5000";
+
   socket = io(BASE_URL, {
     auth: { token },
     transports: ["websocket"],
